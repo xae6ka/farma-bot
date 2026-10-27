@@ -20,9 +20,13 @@ from getWeather import getWeatherToday
 
 import locale
 
-from mytasks import addTask, getTasks, delTask
 from keyboards import main_menu, cancel_menu, pills_menu, tasks_menu
 from states import *
+
+from morning import morning_title
+
+from database import get_tasks, add_tasks, delete_task
+from morning import my_tasks
 
 locale.setlocale(locale.LC_TIME, 'ru_RU.UTF-8')
 
@@ -59,15 +63,11 @@ async def pills(message: Message, state: FSMContext):
 
 @router.message(lambda message: message.text == "➕ Задачи")
 async def tasks(message: Message, state: FSMContext):
-    await message.answer("Твои задачи на сегодня:", reply_markup=tasks_menu)
-
-@router.message(lambda message: message.text == "📱 На главную")
-async def menuu(message: Message, state: FSMContext):
-    await message.answer("🪄 Перемещение в главное меню", reply_markup=main_menu)
+    await message.answer(f'{await my_tasks(message.from_user.id)}', parse_mode="HTML", reply_markup=tasks_menu)
 
 @router.message(lambda message: message.text == "🛠 О разработчике")
 async def about_me(message: Message, state: FSMContext):
-    await message.answer("🛠 О разработчике")
+    await message.answer("Полным владельцем данного кода и бота является <a href='t.me/xae6ka'>Мамкин Программист</a>, нужен сайт, телеграмм-бот, либо дизайн любой сложности - тебе сюда. Предложение пока находиться на тестовой ветке разработки.\n\n<b>Каналы:</b>\n\n<a href='t.me/xae6kaa_room'>Комната Мамкиного Программиста</a> | <a href='t.me/xae6ka_room'>Комната Мамкиного Дизайнера</a>", parse_mode='HTML')
 
 @router.message(Command("start"))
 async def start(message: Message):
@@ -89,50 +89,18 @@ async def cancel(message: Message, state: FSMContext):
     await message.answer("❌ Действие отменено.", reply_markup=main_menu)
 
 # Основное
-@router.message(lambda message: message.text == "📚 Основная информация")
+@router.message(lambda message: message.text == "📚 Основная информация" or message.text == "📱 На главную")
 async def add_start(message: Message, state: FSMContext):
     weather = getWeatherToday()
 
-    text = f"""
-<b>🌅 | Доброе утро, {message.from_user.first_name}!</b>
-
-Город: Санкт-Петербург
-Дата: {weather['today']}
-День недели: {weather['dayNum']}
-Взять зонт: {weather['getUmbrella']}
-
-<b>☀️ | Погода на сегодня:</b>
-
-Температура: {weather['minTemp']} - {weather['maxTemp']}°C
-Ощущается как: {weather['minTempO']} - {weather['maxTempO']}°C
-Максимальная скорость ветра: {weather['wind']} м/с
-Продолжительноесть светового дня: {weather['dayling']} часов
-Вероятность дождя {weather['PrePercent']}%, длится тот суммарно будет {weather['preHours']} часов.
-
-<b>📝 | Задачи на ближайшие дни:</b>
-
-"""
-
-    if len(getTasks()) > 0:
-        for el in getTasks():
-            text += el.getTask() + '\n'
-    else:
-        text += 'Список задач пуст '
-    
-    await message.answer(f"{text}", parse_mode="HTML")
+    await message.answer(f'{await morning_title(weather, message.from_user.first_name, message.from_user.id)}', parse_mode="HTML", reply_markup=main_menu)
 
 #Задачи
 @router.message(lambda message: message.text == "📌 Мои задачи")
 async def add_task(message: Message, state: FSMContext):
-    result = "📌 Мои задачи:\n\n"
+    await message.answer(f'{await my_tasks(message.from_user.id)}', parse_mode="HTML")
 
-    if len(getTasks()) > 0:
-        for el in getTasks():
-            result += el.getTask() + '\n'
-    else:
-        result += 'Список задач пуст'
 
-    await message.answer(f"{result}", parse_mode="HTML")
 
 @router.message(lambda message: message.text == "✏️ Добавить задачу")
 async def add_task(message: Message, state: FSMContext):
@@ -168,14 +136,14 @@ async def add_deadline(message: Message, state: FSMContext):
 
     data = await state.get_data()
 
-    addTask(data['name'], data['deadline'])
+    await add_tasks(message.from_user.id, data['name'], data['deadline'])
 
-    await state.clear()
     await message.answer(
         f"✅ <b>Задача добавлена!</b>",
         parse_mode="HTML",
         reply_markup=tasks_menu
     )
+    await state.clear()
 
 
 @router.message(lambda message: message.text == "🗑 Удалить задачу")
@@ -189,10 +157,7 @@ async def del_task(message: Message, state: FSMContext):
 async def del_task(message: Message, state: FSMContext):
     id = (message.text or "").strip()
 
-    await state.update_data(id=id)
-    data = await state.get_data()
-
-    delTask(int(data['id']))
+    await delete_task(message.from_user.id, id)
 
     await message.answer(
         "Задача удалена (не факт)!",

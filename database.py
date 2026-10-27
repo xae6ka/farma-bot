@@ -1,6 +1,6 @@
 import aiosqlite
 
-DB_NAME = "pills.db"
+DB_NAME = "main.db"
 
 
 async def init_db():
@@ -40,6 +40,15 @@ async def init_db():
                 UNIQUE(pill_id, scheduled_date, scheduled_time)
             )
         """)
+
+        await db.execute("""
+                    CREATE TABLE IF NOT EXISTS tasks (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        name TEXT NOT NULL,
+                        deadline TEXT NOT NULL
+                    )
+                """)
 
         await db.commit()
 
@@ -232,3 +241,33 @@ async def get_active_dose_events():
             WHERE de.status != 'taken'
         """)
         return await cursor.fetchall()
+
+
+#db for tasks
+async def add_tasks(user_id: int, name: str, deadline: str):
+    async with aiosqlite.connect(DB_NAME) as db:
+        cursor = await db.execute(
+            "INSERT INTO tasks (user_id, name, deadline) VALUES (?, ?, ?)",
+            (user_id, name, deadline)
+        )
+
+        await db.commit()
+
+
+async def get_tasks(user_id: int):
+    async with aiosqlite.connect(DB_NAME) as db:
+        cursor = await db.execute("""
+            SELECT t.id, t.name, t.deadline
+            FROM tasks t
+            WHERE t.user_id = ?
+        """, (user_id,))
+        return await cursor.fetchall()
+
+async def delete_task(user_id: int, task_id: int):
+    async with aiosqlite.connect(DB_NAME) as db:
+        await db.execute(
+            "DELETE FROM tasks WHERE id = ? AND user_id = ?",
+            (task_id, user_id)
+        )
+        await db.commit()
+        return True

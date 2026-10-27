@@ -7,14 +7,6 @@ from retry_requests import retry
 from datetime import datetime
 
 
-
-# Setup the Open-Meteo API client with cache and retry on error
-cache_session = requests_cache.CachedSession('.cache', expire_after = 3600)
-retry_session = retry(cache_session, retries = 5, backoff_factor = 0.2)
-openmeteo = openmeteo_requests.Client(session = retry_session)
-
-# Make sure all required weather variables are listed here
-# The order of variables in hourly or daily is important to assign them correctly below
 url = "https://api.open-meteo.com/v1/forecast"
 params = {
 	"latitude": 59.9386,
@@ -22,12 +14,15 @@ params = {
 	"daily": ["temperature_2m_max", "temperature_2m_min", "apparent_temperature_min", "apparent_temperature_max", "wind_speed_10m_max", "daylight_duration", "precipitation_probability_max", "precipitation_hours"],
 	"timezone": "Europe/Moscow",
 }
-responses = openmeteo.weather_api(url, params = params)
-
-# Process first location. Add a for-loop for multiple locations or weather models
-response = responses[0]
 
 def getData():
+    cache_session = requests_cache.CachedSession('.cache', expire_after = 3600)
+    retry_session = retry(cache_session, retries = 5, backoff_factor = 0.2)
+    openmeteo = openmeteo_requests.Client(session = retry_session)
+
+    responses = openmeteo.weather_api(url, params = params)
+    response = responses[0]
+
     print(f"Coordinates: {response.Latitude()}°N {response.Longitude()}°E")
     print(f"Elevation: {response.Elevation()} m asl")
     print(f"Timezone: {response.Timezone()}{response.TimezoneAbbreviation()}")
