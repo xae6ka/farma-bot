@@ -23,3 +23,8 @@ class AddTask(StatesGroup):
 
 class DeleteTask(StatesGroup):
     id = State()
+
+class BroadcastStates(StatesGroup):
+    waiting_photo = State()
+    waiting_text = State()
+    confirmation = State()

@@ -54,7 +54,7 @@ async def send_morning_information(bot):
     weather = getWeatherToday()
 
     for user_id, first_name in users:
-        text = morning_title(weather, first_name, user_id)
+        text = await morning_title(weather, first_name, user_id)
 
         try:
             await bot.send_message(

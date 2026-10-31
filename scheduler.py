@@ -20,14 +20,12 @@ def add_morning_information_job(bot):
     scheduler.add_job(
         send_morning_information,
         trigger="cron",
-        hour=8,
-        minute=30,
+        hour=0,
+        minute=8,
         args=[bot],
         id="morning_information",
         replace_existing=True
     )
-
-    print("🌅 Утренняя рассылка запланирована на 08:30")
 
 
 async def remind_5_minutes(bot, user_id: int, pill_name: str):

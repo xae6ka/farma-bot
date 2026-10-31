@@ -11,6 +11,7 @@ from scheduler import (
     load_active_events,
     add_morning_information_job
 )
+from broadcast import router as broadcast_router
 
 
 async def main():
@@ -19,6 +20,7 @@ async def main():
     bot = Bot(token=BOT_TOKEN)
     dp = Dispatcher()
     dp.include_router(router)
+    dp.include_router(broadcast_router)
 
     start_scheduler()
     await load_schedules(bot)

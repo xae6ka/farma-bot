@@ -8,7 +8,10 @@ async def init_db():
         await db.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 user_id INTEGER PRIMARY KEY,
-                first_name TEXT
+                first_name TEXT,
+                last_name TEXT,
+                username TEXT,
+                is_premium TEXT
             )
         """)
         await db.execute("""
@@ -50,25 +53,44 @@ async def init_db():
                     )
                 """)
 
+        await db.execute("""
+                    CREATE TABLE IF NOT EXISTS Admins (
+                        user_id INTEGER PRIMARY KEY,
+                        first_name TEXT
+                    )
+                """)
+
         await db.commit()
 
 
-async def add_user(user_id: int, first_name: str):
+async def add_user(user_id: int, first_name: str, last_name: str, username: str, is_premium: str):
     async with aiosqlite.connect(DB_NAME) as db:
         await db.execute("""
-            INSERT INTO users (user_id, first_name)
-            VALUES (?, ?)
+            INSERT INTO users (user_id, first_name, last_name, username, is_premium)
+            VALUES (?, ?, ?, ?, ?)
             ON CONFLICT(user_id)
             DO UPDATE SET first_name = excluded.first_name
-        """, (user_id, first_name))
+        """, (user_id, first_name, last_name, username, is_premium))
 
         await db.commit()
 
 async def get_all_users():
     async with aiosqlite.connect(DB_NAME) as db:
         cursor = await db.execute("""
-            SELECT user_id, first_name
+            SELECT user_id, first_name, last_name, username, is_premium
             FROM users
+        """)
+
+        return await cursor.fetchall()
+
+
+async def get_active_users():
+    async with aiosqlite.connect(DB_NAME) as db:
+        cursor = await db.execute("""
+            SELECT user_id, first_name, last_name, username, is_premium
+            FROM users
+            WHERE user_id IN (SELECT user_id FROM pills)
+            AND user_id IN (SELECT user_id FROM tasks)
         """)
 
         return await cursor.fetchall()
@@ -271,3 +293,28 @@ async def delete_task(user_id: int, task_id: int):
         )
         await db.commit()
         return True
+
+
+#admin
+async def add_admin(user_id: int, first_name: str):
+    async with aiosqlite.connect(DB_NAME) as db:
+        await db.execute("""
+            INSERT INTO Admins (user_id, first_name)
+            VALUES (?, ?)
+            ON CONFLICT(user_id)
+            DO UPDATE SET first_name = excluded.first_name
+        """, (user_id, first_name))
+
+        await db.commit()
+
+async def is_admin(user_id):
+    async with aiosqlite.connect(DB_NAME) as db:
+        cursor = await db.execute("""
+            SELECT user_id, first_name
+            FROM Admins
+            WHERE user_id = ?
+        """, (user_id, ))
+
+        return await cursor.fetchall()
+
+# get_all_users()

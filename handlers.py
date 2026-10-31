@@ -3,7 +3,7 @@ from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 
-from database import add_user
+from database import add_user, add_admin, get_all_users, is_admin, get_active_users
 
 from datetime import datetime
 
@@ -20,13 +20,16 @@ from getWeather import getWeatherToday
 
 import locale
 
-from keyboards import main_menu, cancel_menu, pills_menu, tasks_menu
+from keyboards import main_menu, cancel_menu, pills_menu, tasks_menu, admin_menu
 from states import *
 
 from morning import morning_title
 
 from database import get_tasks, add_tasks, delete_task
 from morning import my_tasks
+
+from tabulate import tabulate
+from html import escape
 
 locale.setlocale(locale.LC_TIME, 'ru_RU.UTF-8')
 
@@ -73,7 +76,10 @@ async def about_me(message: Message, state: FSMContext):
 async def start(message: Message):
     await add_user(
         user_id=message.from_user.id,
-        first_name=message.from_user.first_name
+        first_name=message.from_user.first_name,
+        last_name=message.from_user.last_name,
+        username=message.from_user.username,
+        is_premium=bool(message.from_user.is_premium)
     )
 
     await message.answer(
@@ -460,3 +466,64 @@ async def pill_snooze(callback: CallbackQuery):
         parse_mode="HTML"
     )
     await callback.answer("Напомню через 10 минут ⏰")
+
+
+#admin_panel
+@router.message(Command("admin"))
+async def start(message: Message):
+    await add_admin(
+        user_id=message.from_user.id,
+        first_name=message.from_user.first_name
+    )
+
+    if message.text.split(' ')[1] == os.getenv("ADMIN_PASSWORD"):
+        await message.answer(
+                f"Бля, ты админ",
+                parse_mode="HTML",
+                reply_markup=admin_menu
+            )
+    else:
+        await message.answer(message.text.split(' ')[1])
+
+
+@router.message(lambda message: message.text == "🗒 Отчет")
+async def add_task(message: Message, state: FSMContext):
+    if (await is_admin(message.from_user.id)) != []:
+        users = await get_all_users()
+        active_users = await get_active_users()
+
+
+        headers = ["Имя", "Username", "Sub"]
+
+        rows = []
+
+        for user in active_users:
+            rows.append([
+                escape(str(user[1] or "-")),
+                escape(f"@{user[3]}" if user[3] else "-"),
+                "⭐" if str(user[4]) == "1" else "Нет"
+            ])
+
+        table = tabulate(
+            rows,
+            headers=headers,
+            tablefmt="simple",
+            colalign=("left", "left", "center")
+        )
+
+
+        text = f"""
+<b>🗒 | ОТЧЕТ</b>
+
+Общее кол-во пользователей: {len(users)}
+Количество активных пользователей: {len(active_users)}
+Активные / все: {(len(active_users)/len(users))*100}%
+Админ права: {(await is_admin(message.from_user.id)) != []}
+Версия: {os.getenv("VERSION")}
+
+Таблица пользователей:
+
+<pre>{table}</pre>
+"""
+        
+        await message.answer(text, parse_mode="HTML")
