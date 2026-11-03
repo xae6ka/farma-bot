@@ -20,8 +20,8 @@ def add_morning_information_job(bot):
     scheduler.add_job(
         send_morning_information,
         trigger="cron",
-        hour=0,
-        minute=8,
+        hour=7,
+        minute=15,
         args=[bot],
         id="morning_information",
         replace_existing=True

@@ -53,17 +53,18 @@ async def send_morning_information(bot):
 
     weather = getWeatherToday()
 
-    for user_id, first_name in users:
-        text = await morning_title(weather, first_name, user_id)
+    for user in users:
+        print(user)
+        text = await morning_title(weather, user[1], user[0])
 
         try:
             await bot.send_message(
-                user_id,
+                user[0],
                 text,
                 parse_mode="HTML"
             )
         except Exception as e:
             print(
                 f"Не удалось отправить сообщение "
-                f"{user_id}: {e}"
+                f"{user[0]}: {e}"
             )
