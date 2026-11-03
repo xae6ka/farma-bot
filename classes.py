@@ -12,9 +12,11 @@ class Task:
     def getTask(self):
         a = (self.deadline - datetime.now()).days
 
-        if a <= 0:
+        if a < 0:
             return f'{self.id}. {self.name} - <b>Дедлайн истек!</b>'
         elif a == 1:
             return f'{self.id}. {self.name} - <b>Остался один день!</b>'
+        elif a == 0:
+            return f'{self.id}. {self.name} - <b>Дедлайн истекает сегодня!</b>'
         else:
             return f'{self.id}. {self.name} - <b>Осталось {a} дней!</b>'
