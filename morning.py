@@ -48,23 +48,20 @@ async def morning_title(weather, first_name, user_id):
     return text
 
 
-async def send_morning_information(bot):
-    users = await get_all_users()
-
+async def send_morning_information(bot, user_id, first_name):
     weather = getWeatherToday()
 
-    for user in users:
-        print(user)
-        text = await morning_title(weather, user[1], user[0])
+    text = await morning_title(
+        weather,
+        first_name,
+        user_id
+    )
 
-        try:
-            await bot.send_message(
-                user[0],
-                text,
-                parse_mode="HTML"
-            )
-        except Exception as e:
-            print(
-                f"Не удалось отправить сообщение "
-                f"{user[0]}: {e}"
-            )
+    try:
+        await bot.send_message(
+            chat_id=user_id,
+            text=text,
+            parse_mode="HTML"
+        )
+    except Exception as e:
+        print(f"Не удалось отправить сообщение {user_id}: {e}")

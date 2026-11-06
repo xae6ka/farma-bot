@@ -3,8 +3,10 @@ from datetime import datetime, timedelta
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-from database import get_or_create_dose_event, get_active_dose_events, get_dose_event
+from database import get_or_create_dose_event, get_active_dose_events, get_dose_event, get_all_users_morning
 from morning import send_morning_information
+
+from database import add_morning
 
 scheduler = AsyncIOScheduler()
 
@@ -16,17 +18,46 @@ def get_pill_keyboard(event_id: int):
     ]])
 
 
-def add_morning_information_job(bot):
+# def add_morning_information_job(bot):
+#     scheduler.add_job(
+#         send_morning_information,
+#         trigger="cron",
+#         hour=7,
+#         minute=15,
+#         args=[bot],
+#         id="morning_information",
+#         replace_existing=True
+#     )
+
+async def add_morning_information_job(bot, user_id, first_name, time):
+    hour, minute = map(int, time.split(':'))
+
+    await add_morning(user_id, first_name, True, time)
+
     scheduler.add_job(
         send_morning_information,
         trigger="cron",
-        hour=7,
-        minute=15,
-        args=[bot],
-        id="morning_information",
+        hour=hour,
+        minute=minute,
+        args=[bot, user_id, first_name],
+        id=f"morning_information_{user_id}",
         replace_existing=True
     )
 
+# доделать
+async def restore_morning_jobs(bot):
+    users = await get_all_users_morning()
+
+    for user in users:
+        user_id = user[0]
+        first_name = user[1]  
+
+        await add_morning_information_job(
+            bot,
+            user_id,
+            first_name,
+            user[3]
+        )
 
 async def remind_5_minutes(bot, user_id: int, pill_name: str):
     await bot.send_message(

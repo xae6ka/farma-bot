@@ -11,7 +11,8 @@ async def init_db():
                 first_name TEXT,
                 last_name TEXT,
                 username TEXT,
-                is_premium TEXT
+                is_premium TEXT,
+                city TEXT
             )
         """)
         await db.execute("""
@@ -60,17 +61,26 @@ async def init_db():
                     )
                 """)
 
+        await db.execute("""
+                            CREATE TABLE IF NOT EXISTS Morning (
+                                user_id INTEGER PRIMARY KEY,
+                                first_name TEXT,
+                                send_morning_message BOOLEAN,
+                                time_send_morning_message TEXT
+                            )
+                        """)
+
         await db.commit()
 
 
 async def add_user(user_id: int, first_name: str, last_name: str, username: str, is_premium: str):
     async with aiosqlite.connect(DB_NAME) as db:
         await db.execute("""
-            INSERT INTO users (user_id, first_name, last_name, username, is_premium)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO users (user_id, first_name, last_name, username, is_premium, city)
+            VALUES (?, ?, ?, ?, ?, ?)
             ON CONFLICT(user_id)
             DO UPDATE SET first_name = excluded.first_name
-        """, (user_id, first_name, last_name, username, is_premium))
+        """, (user_id, first_name, last_name, username, is_premium, 'Saint-Petersburg'))
 
         await db.commit()
 
@@ -318,3 +328,42 @@ async def is_admin(user_id):
         return await cursor.fetchall()
 
 # get_all_users()
+
+
+# 
+async def add_morning(
+    user_id: int,
+    first_name: str,
+    send_morning_message: bool,
+    time_send_morning_message: str
+):
+    async with aiosqlite.connect(DB_NAME) as db:
+        await db.execute("""
+            INSERT INTO Morning (
+                user_id,
+                first_name,
+                send_morning_message,
+                time_send_morning_message
+            )
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET
+                send_morning_message = excluded.send_morning_message,
+                time_send_morning_message = excluded.time_send_morning_message
+        """, (
+            user_id,
+            first_name,
+            send_morning_message,
+            time_send_morning_message
+        ))
+
+        await db.commit()
+
+async def get_all_users_morning():
+    async with aiosqlite.connect(DB_NAME) as db:
+        cursor = await db.execute("""
+            SELECT user_id, first_name, send_morning_message, time_send_morning_message
+            FROM Morning
+            WHERE send_morning_message = TRUE
+        """)
+
+        return await cursor.fetchall()

@@ -28,3 +28,6 @@ class BroadcastStates(StatesGroup):
     waiting_photo = State()
     waiting_text = State()
     confirmation = State()
+
+class ChangeTime(StatesGroup):
+    time = State()

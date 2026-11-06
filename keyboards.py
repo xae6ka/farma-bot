@@ -6,6 +6,7 @@ main_menu = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="📚 Основная информация")],
         [KeyboardButton(text="➕ Задачи"), KeyboardButton(text="💊 Таблетки")],
+        [KeyboardButton(text="⚙️ Настройки")],
         [KeyboardButton(text="🛠 О разработчике")]
     ],
     resize_keyboard=True
@@ -38,9 +39,9 @@ cancel_menu = ReplyKeyboardMarkup(
 
 admin_menu = ReplyKeyboardMarkup(
     keyboard=[
+        [KeyboardButton(text="🔗 Рассылка")],
+        [KeyboardButton(text="📕 Отчет"), KeyboardButton(text="📚 Полный список пользователей")],
         [KeyboardButton(text="📱 На главную")],
-        [KeyboardButton(text="🗒 Отчет")],
-        [KeyboardButton(text="Null"), KeyboardButton(text="🔗 Рассылка")],
     ],
     resize_keyboard=True
 )
@@ -73,3 +74,26 @@ def broadcast_confirm_keyboard():
     builder.adjust(1)
 
     return builder.as_markup()
+
+#settings
+settings_menu = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="🌇 Утренняя рассылка")],
+        [KeyboardButton(text="📌 Смена города")],
+        [KeyboardButton(text="📱 На главную")],
+
+    ],
+    resize_keyboard=True
+)
+
+
+morning_menu = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="🟢 Включить утреннюю рассылку")],
+        [KeyboardButton(text="🔴 Отключить утреннюю рассылку")],
+        [KeyboardButton(text="📊 Изменить время отправки сообщения")],
+        [KeyboardButton(text="📱 На главную"), KeyboardButton(text="⭕️ Назад")],
+
+    ],
+    resize_keyboard=True
+)

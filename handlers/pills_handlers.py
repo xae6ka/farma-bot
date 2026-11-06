@@ -1,47 +1,21 @@
 from aiogram import Router
-from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 
-from database import add_user, add_admin, get_all_users, is_admin, get_active_users
+from keyboards import main_menu, cancel_menu, pills_menu
+from states import *
 
-from datetime import datetime
+from scheduler import add_reminder, remove_reminders, schedule_snooze
 
 from database import (
     add_pill, get_pills, get_pill, delete_pill, update_schedule,
     get_dose_event, mark_dose_taken, mark_dose_snoozed
 )
-from scheduler import add_reminder, remove_reminders, schedule_snooze
 
-import os
-from dotenv import load_dotenv
-
-from getWeather import getWeatherToday
-
-import locale
-
-from keyboards import main_menu, cancel_menu, pills_menu, tasks_menu, admin_menu
-from states import *
-
-from morning import morning_title
-
-from database import get_tasks, add_tasks, delete_task
-from morning import my_tasks
-
-from tabulate import tabulate
-from html import escape
-
-locale.setlocale(locale.LC_TIME, 'ru_RU.UTF-8')
-
-load_dotenv()
 
 router = Router()
 
-VERSION = os.getenv("VERSION")
-
-
-
-# ААА МЕНЮШЧКА
+# Таблетки пить
 @router.message(lambda message: message.text == "💊 Таблетки")
 async def pills(message: Message, state: FSMContext):
     print("LOGGING: use func list_pills")
@@ -64,116 +38,7 @@ async def pills(message: Message, state: FSMContext):
 
     await message.answer(result, parse_mode="HTML", reply_markup=pills_menu)
 
-@router.message(lambda message: message.text == "➕ Задачи")
-async def tasks(message: Message, state: FSMContext):
-    await message.answer(f'{await my_tasks(message.from_user.id)}', parse_mode="HTML", reply_markup=tasks_menu)
 
-@router.message(lambda message: message.text == "🛠 О разработчике")
-async def about_me(message: Message, state: FSMContext):
-    await message.answer("Полным владельцем данного кода и бота является <a href='t.me/xae6ka'>Мамкин Программист</a>, нужен сайт, телеграмм-бот, либо дизайн любой сложности - тебе сюда. Предложение пока находиться на тестовой ветке разработки.\n\n<b>Каналы:</b>\n\n<a href='t.me/xae6kaa_room'>Комната Мамкиного Программиста</a> | <a href='t.me/xae6ka_room'>Комната Мамкиного Дизайнера</a>", parse_mode='HTML')
-
-@router.message(Command("start"))
-async def start(message: Message):
-    await add_user(
-        user_id=message.from_user.id,
-        first_name=message.from_user.first_name,
-        last_name=message.from_user.last_name,
-        username=message.from_user.username,
-        is_premium=bool(message.from_user.is_premium)
-    )
-
-    await message.answer(
-        f"💊 <b>Салют, {message.from_user.first_name}!</b>\n\nБот разработан на aiogram3.0 + chatGPT\n\n<a link='t.me/xae6ka'>За более подробной информацией обращаться к единственному разрабочику, тык\n\nVersion: {VERSION}</a>",
-        parse_mode="HTML",
-        reply_markup=main_menu
-    )
-
-
-@router.message(lambda message: message.text == "❌ Отмена")
-async def cancel(message: Message, state: FSMContext):
-    await state.clear()
-    await message.answer("❌ Действие отменено.", reply_markup=main_menu)
-
-# Основное
-@router.message(lambda message: message.text == "📚 Основная информация" or message.text == "📱 На главную")
-async def add_start(message: Message, state: FSMContext):
-    weather = getWeatherToday()
-
-    await message.answer(f'{await morning_title(weather, message.from_user.first_name, message.from_user.id)}', parse_mode="HTML", reply_markup=main_menu)
-
-#Задачи
-@router.message(lambda message: message.text == "📌 Мои задачи")
-async def add_task(message: Message, state: FSMContext):
-    await message.answer(f'{await my_tasks(message.from_user.id)}', parse_mode="HTML")
-
-
-
-@router.message(lambda message: message.text == "✏️ Добавить задачу")
-async def add_task(message: Message, state: FSMContext):
-    await state.clear()
-    await state.set_state(AddTask.name)
-    await message.answer("📌 Че у нас сегодня:", reply_markup=cancel_menu)
-
-
-@router.message(AddTask.name)
-async def add_name(message: Message, state: FSMContext):
-    name = (message.text or "").strip()
-    if not name:
-        await message.answer("❌ Название не может быть пустым.")
-        return
-    await state.update_data(name=name)
-    await state.set_state(AddTask.deadline)
-    await message.answer(
-        "🕐 Теперь введи дедлайн задачи.\n\n"
-        "Например:\n<code>20.10.2026</code>",
-        parse_mode="HTML"
-    )
-
-@router.message(AddTask.deadline)
-async def add_deadline(message: Message, state: FSMContext):
-    deadline = list(map(int, (message.text or "").split('.')))
-
-    if len(deadline) == 2:
-        deadline = datetime(datetime.today().year, deadline[1], deadline[0], 23, 59)
-    elif len(deadline) == 3:
-        deadline = datetime(deadline[2], deadline[1], deadline[0], 23, 59)
-
-    await state.update_data(deadline=deadline)
-
-    data = await state.get_data()
-
-    await add_tasks(message.from_user.id, data['name'], data['deadline'])
-
-    await message.answer(
-        f"✅ <b>Задача добавлена!</b>",
-        parse_mode="HTML",
-        reply_markup=tasks_menu
-    )
-    await state.clear()
-
-
-@router.message(lambda message: message.text == "🗑 Удалить задачу")
-async def del_task(message: Message, state: FSMContext):
-    await state.clear()
-    await state.set_state(DeleteTask.id)
-    await message.answer("🗑 Введи ID задачи, которую удаляем:", reply_markup=cancel_menu)
-
-
-@router.message(DeleteTask.id)
-async def del_task(message: Message, state: FSMContext):
-    id = (message.text or "").strip()
-
-    await delete_task(message.from_user.id, id)
-
-    await message.answer(
-        "Задача удалена (не факт)!",
-        reply_markup=tasks_menu
-    )
-
-    await state.clear()
-
-
-# Таблетки пить
 
 @router.message(lambda message: message.text == "➕ Добавить таблетку")
 async def add_start(message: Message, state: FSMContext):
@@ -466,64 +331,3 @@ async def pill_snooze(callback: CallbackQuery):
         parse_mode="HTML"
     )
     await callback.answer("Напомню через 10 минут ⏰")
-
-
-#admin_panel
-@router.message(Command("admin"))
-async def start(message: Message):
-    await add_admin(
-        user_id=message.from_user.id,
-        first_name=message.from_user.first_name
-    )
-
-    if message.text.split(' ')[1] == os.getenv("ADMIN_PASSWORD"):
-        await message.answer(
-                f"Бля, ты админ",
-                parse_mode="HTML",
-                reply_markup=admin_menu
-            )
-    else:
-        await message.answer(message.text.split(' ')[1])
-
-
-@router.message(lambda message: message.text == "🗒 Отчет")
-async def add_task(message: Message, state: FSMContext):
-    if (await is_admin(message.from_user.id)) != []:
-        users = await get_all_users()
-        active_users = await get_active_users()
-
-
-        headers = ["Имя", "Username", "Sub"]
-
-        rows = []
-
-        for user in active_users:
-            rows.append([
-                escape(str(user[1] or "-")),
-                escape(f"@{user[3]}" if user[3] else "-"),
-                "⭐" if str(user[4]) == "1" else "Нет"
-            ])
-
-        table = tabulate(
-            rows,
-            headers=headers,
-            tablefmt="simple",
-            colalign=("left", "left", "center")
-        )
-
-
-        text = f"""
-<b>🗒 | ОТЧЕТ</b>
-
-Общее кол-во пользователей: {len(users)}
-Количество активных пользователей: {len(active_users)}
-Активные / все: {(len(active_users)/len(users))*100}%
-Админ права: {(await is_admin(message.from_user.id)) != []}
-Версия: {os.getenv("VERSION")}
-
-Таблица пользователей:
-
-<pre>{table}</pre>
-"""
-        
-        await message.answer(text, parse_mode="HTML")
